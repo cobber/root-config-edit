@@ -29,8 +29,8 @@ do
             mkdir -p "$host_config_dir" \
                 && mv    $orig_config_file $host_config_file \
                 && ln -s $host_config_file $orig_config_file
-            editor_args="$editor_args $host_config_file"
         fi
+        editor_args="$editor_args $host_config_file"
     else
         editor_args="$editor_args $config_file"
     fi
