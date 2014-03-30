@@ -1,0 +1,6 @@
+config-gc
+        - remove files in host tree which don't exist ist original tree
+        - ONLY check /etc and /usr/local/etc
+
+how to handle config files which the admin doesn't actually edit manually, e.g.
+ezjail configurations
