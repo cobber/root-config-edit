@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# setup configuration
+path=/usr/loca/bin:/usr/bin:/bin
+host_prefix=/host
+editor=${EDITOR:-vi}
+editor_args=""
+
+if [ $(whoami) != 'root' ]
+then
+    printf "edconf must be run by root\n"
+    exit 1
+fi
+
+# make sure config files have been linked to the the host directory tree and
+# checked into git first
+for config_file in "$@"
+do
+    # normalise file paths - full path and no ..'s etc
+    config_file=$(readlink -f $config_file)
+    orig_config_file=${config_file#$host_prefix}
+    if [ -n "$orig_config_file" -a -f "$orig_config_file" -a -r "$orig_config_file" ]
+    then
+        host_config_file="${host_prefix}${orig_config_file}"
+        host_config_dir=$(dirname $host_config_file)
+        if [ ! -f "$host_config_file" ]
+        then
+            echo "adding $orig_config_file to $host_prefix repo"
+            mkdir -p "$host_config_dir" \
+                && mv    $orig_config_file $host_config_file \
+                && ln -s $host_config_file $orig_config_file
+            editor_args="$editor_args $host_config_file"
+        fi
+    else
+        editor_args="$editor_args $config_file"
+    fi
+done
+
+chdir $host_prefix
+if [ ! -d .git ]
+then
+    git init
+    git config --global user.name "root"
+    git config --global user.email root@$(hostname)
+fi
+git add .
+git add -u
+git commit -m 'edconfig prepare'
+
+echo $editor $editor_args
+sleep 3
+$editor $editor_args
+
+git add -u
+git commit -m 'edconfig update'
+
+exit
