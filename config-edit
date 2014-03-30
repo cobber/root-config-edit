@@ -1,57 +1,105 @@
 #!/bin/sh
 
-# setup configuration
+# config-edit - edit system configurations files
+#
+# USAGE:
+#
+#   config-edit [editor options] files...
+#
+# DESCRIPTION:
+#
+#   Edit system configuration files.
+#   Each file is initially re-located to the host's configuration
+#   repository and then symbolically linked to its original location.
+#
+#   Arguments containing spaces are NOT supported!
+#
+# SEE ALSO:
+#
+#   config-revert
+
+# script configuration
 path=/usr/loca/bin:/usr/bin:/bin
+script=$(basename $0)
 host_prefix=/host
 editor=${EDITOR:-vi}
 editor_args=""
 
 if [ $(whoami) != 'root' ]
 then
-    printf "edconf must be run by root\n"
+    echo "$script must be run by root" >&2
     exit 1
 fi
 
-# make sure config files have been linked to the the host directory tree and
-# checked into git first
+# move and link files if needed
 for config_file in "$@"
 do
-    # normalise file paths - full path and no ..'s etc
-    config_file=$(readlink -f $config_file)
-    orig_config_file=${config_file#$host_prefix}
-    if [ -n "$orig_config_file" -a -f "$orig_config_file" -a -r "$orig_config_file" ]
-    then
-        host_config_file="${host_prefix}${orig_config_file}"
-        host_config_dir=$(dirname $host_config_file)
-        if [ ! -f "$host_config_file" ]
-        then
-            echo "adding $orig_config_file to $host_prefix repo"
-            mkdir -p "$host_config_dir" \
-                && mv    $orig_config_file $host_config_file \
-                && ln -s $host_config_file $orig_config_file
-        fi
-        editor_args="$editor_args $host_config_file"
-    else
-        editor_args="$editor_args $config_file"
-    fi
+    case "$config_file" in
+        -*) # option for editor
+            editor_args="$editor_args $config_file"
+            ;;
+        *)  # configuration file
+            # normalise file paths - full path and no ..'s etc
+            # file must exist for readlink to work
+            touch $config_file
+            orig_config_file=$(readlink -f $config_file)
+            orig_config_file=${orig_config_file#$host_prefix}
+            # only let user edit normal files
+            if [ -f $orig_config_file -o ! -e $orig_config_file ]
+            then
+                host_config_file="${host_prefix}${orig_config_file}"
+                host_config_dir=$(dirname $host_config_file)
+                if [ ! $host_config_file -ef $orig_config_file ]
+                then
+                    echo "adding $orig_config_file to $host_prefix repo"
+                    # stop mv from failing if original file doesn't exist
+                    touch $orig_config_file
+                    mkdir -p $host_config_dir \
+                        && mv    $orig_config_file $host_config_file \
+                        && ln -s $host_config_file $orig_config_file
+                    if [ $? != 0 ]
+                    then
+                        echo "error: cannot prepare $orig_config_file for editing" >&2
+                        exit 1
+                    fi
+                fi
+                editor_args="$editor_args $host_config_file"
+            else
+                # non-files are not supported
+                echo "error: $config_file is not a regular file - skipped." >&2
+            fi
+            ;;
+    esac
 done
 
+if [ -z "$editor_args" ]
+then
+    echo "Nothing to edit"
+    exit
+fi
+
+# work in the host repository
 chdir $host_prefix
+
+# set up git repository if needed
 if [ ! -d .git ]
 then
     git init
-    git config --global user.name "root"
-    git config --global user.email root@$(hostname)
+    git config --global user.name  "root"
+    git config --global user.email "root@"$(hostname)
 fi
+
+# commit state prior to editing
+# (will do nothing if already committed)
 git add .
 git add -u
-git commit -m 'edconfig prepare'
+git commit -m "$script prepare"
 
-echo $editor $editor_args
-sleep 3
+# edit the files
 $editor $editor_args
 
+# commit the changes
 git add -u
-git commit -m 'edconfig update'
+git commit -m "$script update"
 
 exit

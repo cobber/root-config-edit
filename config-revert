@@ -1,0 +1,83 @@
+#!/bin/sh
+
+# config-revert - revert a configuration file to its initial state
+#
+# USAGE:
+#
+#   config-revert files...
+#
+# DESCRIPTION:
+#   
+#   Revert configuration files to their initial state.
+#   The files are removed from the configuration repository and the soft-link
+#   is replaced by the first copy of the file.
+#
+# USE CASES:
+#
+#   original file is linked to host file - revert
+#   original file is NOT linked to host file - skip
+#   original file doesn't exist - skip
+#   host file doesn't exist - skip
+#
+#   revert:
+#       checkout initial version of file
+#       replace original file with initial version
+#       remove original file if it has 0 size
+#       update git repository
+#
+# SEE ALSO:
+#
+#   config-edit
+
+# script configuration
+path=/usr/loca/bin:/usr/bin:/bin
+script=$(basename $0)
+host_prefix=/host
+editor=${EDITOR:-vi}
+editor_args=""
+
+if [ $(whoami) != 'root' ]
+then
+    echo "$script must be run by root" >&2
+    exit 1
+fi
+
+for config_file in "$@"
+do
+    # normalise file paths - full path and no ..'s etc
+    orig_config_file=$(readlink -f $config_file)
+    orig_config_file=${orig_config_file#$host_prefix}
+    # only revert if original file is currently a sym-link
+    if [ -f $orig_config_file ]
+    then
+        host_config_file="${host_prefix}${orig_config_file}"
+        host_config_dir=$(dirname $host_config_file)
+        if [ $orig_config_file -ef $host_config_file ]
+        then
+            first_version=$(git log --format='%H' --reverse $host_config_file | head -n 1)
+            git checkout $first_version $host_config_file
+            if [ -s $host_config_file ]
+            then
+                rm $orig_config_file
+                mv $host_config_file $orig_config_file
+                echo "reverted $orig_config_file to original state"
+            else
+                rm $orig_config_file
+                rm $host_config_file
+                echo "deleted  $orig_config_file"
+            fi
+        else
+            echo "error: $orig_config_file is not linked to $host_config_file - skipped." >&2
+        fi
+    else
+        # non-files are not supported
+        echo "error: $config_file is not a regular file - skipped." >&2
+    fi
+done
+
+chdir $host_prefix
+
+git add -u
+git commit -m 'remove reverted files'
+
+exit
