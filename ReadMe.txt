@@ -1,3 +1,11 @@
+            ***** WARNING *****
+
+DO NOT USE THESE SCRIPTS TO EDIT FILES IN /boot!!!
+The /hosts directory will probably NOT be available
+at boot time - which would lead to broken sym-links!
+
+            ***** WARNING *****
+
 MOTIVATION:
 
     Typically, a unix system is configured by editing text files in /etc and
