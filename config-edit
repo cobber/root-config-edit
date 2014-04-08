@@ -38,6 +38,11 @@ do
         -*) # option for editor
             editor_args="$editor_args $config_file"
             ;;
+        /boot/*)
+            # NEVER create links out of /boot
+            # - may not be available while system being started
+            editor_args="$editor_args $config_file"
+            ;;
         *)  # configuration file
             # normalise file paths - full path and no ..'s etc
             # file must exist for readlink to work
