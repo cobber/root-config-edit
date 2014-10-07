@@ -30,9 +30,11 @@
 #   config-edit
 
 # script configuration
+host_prefix=/config
+
+# do not change anything below this line
 path=/usr/loca/bin:/usr/bin:/bin
 script=$(basename $0)
-host_prefix=/host
 editor=${EDITOR:-vi}
 editor_args=""
 

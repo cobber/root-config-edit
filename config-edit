@@ -19,9 +19,11 @@
 #   config-revert
 
 # script configuration
+host_prefix=/config
+
+# do not change anything below this line
 path=/usr/loca/bin:/usr/bin:/bin
 script=$(basename $0)
-host_prefix=/host
 editor=${EDITOR:-vi}
 editor_args=""
 
@@ -29,6 +31,16 @@ if [ $(whoami) != 'root' ]
 then
     echo "$script must be run by root" >&2
     exit 1
+fi
+
+if [ ! -d $host_prefix ]
+then
+    mkdir -p $host_prefix
+fi
+if [ ! -d $host_prefix ]
+then
+    echo "Cannot access config dir: $host_prefix"
+    exit 2
 fi
 
 # move and link files if needed
@@ -65,7 +77,7 @@ do
                     if [ $? != 0 ]
                     then
                         echo "error: cannot prepare $orig_config_file for editing" >&2
-                        exit 1
+                        exit 3
                     fi
                 fi
                 editor_args="$editor_args $host_config_file"
@@ -105,6 +117,10 @@ $editor $editor_args
 
 # commit the changes
 git add -u
-git commit -m "$script update"
+if git commit -m "$script update"
+then
+    logger -t config New config: $( git rev-parse --short HEAD )
+    git diff --stat HEAD^ | logger -t config $line
+fi
 
 exit

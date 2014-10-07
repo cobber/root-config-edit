@@ -1,10 +1,15 @@
             ***** WARNING *****
 
-DO NOT USE THESE SCRIPTS TO EDIT FILES IN /boot!!!
-The /hosts directory will probably NOT be available
+THESE SCRIPTS WILL NOT WORK FOR FILES IN /boot!!!
+The /config directory will probably NOT be available
 at boot time - which would lead to broken sym-links!
+config-edit has a check to prevent this.
 
             ***** WARNING *****
+
+Author:      Stephen Riehm
+Copyright:   2014-03-30
+Last update: 2014-10-07
 
 MOTIVATION:
 
@@ -32,20 +37,24 @@ MOTIVATION:
         ideal place to put puppet stuff
 
 My dream OS:
-    /System
+    /system
         OS only
         provides default configurations
         exact copy of installation image! (e.g. READ ONLY except during updates)
         must be able to run without configuration
-    /Library
+        boot kernel etc. could also be stored here
+            - no need for extra /boot partition since this partition should be read only anyway.
+    /package
         additional package installations
-        each package provides default configuration
+        each package provides its own default configuration
         exact copy of package installation images! (e.g. READ ONLY except during updates)
-        initial / automatic configuration should be confined to /Library/Configuration
-    /Host or /Configuration
+        initial / automatic configuration should be confined to /Package/Configuration/<package name>
+        it should be possible to maintain multiple versions of each package simultaneously
+        it should be possible for users & programs to query the installed packages
+        package source files etc. should NOT be stored here (use /data/source or /data/reference
+    /host or /configuration
         ONLY contains MANUALLY configuration information
         list of installed packages
         configuration files for non-standard configurations
-    /User, /Data, /Sites etc
+    /user, /data, /sites etc
         for everything else
-

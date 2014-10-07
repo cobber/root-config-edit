@@ -1,6 +1,6 @@
 config-gc
-        - remove files in host tree which don't exist ist original tree
-        - ONLY check /etc and /usr/local/etc
+        - remove files in host tree which don't exist in original tree any more
+        - ONLY track files from /etc and /usr/local/etc
 
 how to handle config files which the admin doesn't actually edit manually, e.g.
-ezjail configurations
+ezjail configurations?
